@@ -11804,7 +11804,7 @@ void CvGameTextMgr::buildBuildingRequiresString(CvWStringBuffer& szBuffer, Build
 				
 				if (NO_PLAYER != ePlayer)
 				{
-					szPaganReligionName = CvWString(GC.getCivilizationInfo(GET_PLAYER(ePlayer).getCivilizationType()).getPaganReligionName());
+					szPaganReligionName = CvWString(GC.getPaganReligionInfo((PaganReligionTypes)GC.getCivilizationInfo(GET_PLAYER(ePlayer).getCivilizationType()).getPaganReligion()).getDescription());
 				}
 
 				szBuffer.append(NEWLINE);
@@ -18206,7 +18206,7 @@ void CvGameTextMgr::setConvertHelp(CvWStringBuffer& szBuffer, PlayerTypes ePlaye
 	}
 	else if (GET_PLAYER(ePlayer).isStateReligion())
 	{
-		CvWString szPaganReligionName = GC.getCivilizationInfo(GET_PLAYER(ePlayer).getCivilizationType()).getPaganReligionName();
+		CvWString szPaganReligionName = GC.getPaganReligionInfo((PaganReligionTypes)GC.getCivilizationInfo(GET_PLAYER(ePlayer).getCivilizationType()).getPaganReligion()).getDescription();
 
 		if (!szPaganReligionName.length() == 0)
 		{
@@ -21488,7 +21488,7 @@ bool CvGameTextMgr::setBuildingAdditionalBombardDefenseHelp(CvWStringBuffer &szB
 // Leoreth
 void CvGameTextMgr::parseMinorReligionHelp(CvWStringBuffer &szBuffer, CivilizationTypes eCivilization)
 {
-	const wchar* szPaganReligionName = GC.getCivilizationInfo(eCivilization).getPaganReligionName();
+	const wchar* szPaganReligionName = GC.getPaganReligionInfo((PaganReligionTypes)GC.getCivilizationInfo(eCivilization).getPaganReligion()).getDescription();
 
 	if (CvWString(szPaganReligionName).empty())
 	{		
