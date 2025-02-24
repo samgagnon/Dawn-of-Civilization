@@ -70,6 +70,7 @@ def completeCollapse(iPlayer):
 		
 def downgradeImprovements(iPlayer):
 	lAlwaysDowngrade = [iCottage, iHamlet, iVillage, iTown]
+	# NOTE Harappa and Toltecs are hardcoded here, why?
 	bPlayerDowngrade = civ(iPlayer) in [iHarappa, iToltecs] and not player(iPlayer).isHuman()
 	
 	improvementPlots = plots.owner(iPlayer).where(lambda p: p.getImprovementType() >= 0)
@@ -95,6 +96,7 @@ def downgradeImprovements(iPlayer):
 			plot.setImprovementType(-1)
 		
 		# Destroy all Harappan and Toltec improvements
+		# TODO get rid of this hardcoded stuff
 		if civ(iPlayer) in [iHarappa, iToltecs] and not player(iPlayer).isHuman():
 			if iImprovement >= 0:
 				plot.setImprovementType(-1)
@@ -110,6 +112,7 @@ def collapseToCore(iPlayer):
 		team(iVassal).setVassal(player(iPlayer).getTeam(), False, False)
 				
 	# more than half ahistorical, only secede ahistorical cities
+	# TODO remove all references to ahistorical cities, make no distinction between ahistorical and historical
 	if 2 * ahistoricalCities.count() > nonCoreCities.count():
 	
 		# notify owner
