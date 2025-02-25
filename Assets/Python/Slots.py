@@ -91,6 +91,7 @@ def getImpact(iCiv):
 	return max(iImpactMarginal, iImpact)
 			
 def isOutdated(iCiv):
+	# TODO change rules for dFall
 	if year() < year(dFall[iCiv]):
 		return False
 

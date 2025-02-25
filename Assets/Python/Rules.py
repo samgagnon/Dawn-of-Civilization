@@ -53,6 +53,7 @@ def resetNationalWonders(iOwner, iPlayer, city, bConquest, bTrade):
 
 @handler("cityAcquired")
 def spreadTradingCompanyCulture(iOwner, iPlayer, city, bConquest, bTrade):
+	# TODO rather than using geography to determine cuulture replacement, use the tech differential between the two civs
 	if bTrade and civ(iPlayer) in lTradingCompanyCivs and city.getRegionID() in lAsia + lSubSaharanAfrica:
 		for plot in plots.surrounding(city):
 			if location(plot) == location(city):
@@ -107,10 +108,8 @@ def updateFoundValues(city):
 @handler("cityBuilt")
 def createColonialDefenders(city):
 	iPlayer = city.getOwner()
-	if not player(iPlayer).isHuman():
-		if civ(iPlayer) in dCivGroups[iCivGroupEurope] and city.getRegionID() not in lEurope:
-			createGarrisons(city, iPlayer, 1)
-			createRoleUnit(iPlayer, city, iWork, 1)
+	createGarrisons(city, iPlayer, 1)
+	createRoleUnit(iPlayer, city, iWork, 1)
 
 
 @handler("cityBuilt")
@@ -136,14 +135,10 @@ def captureSlaves(winningUnit, losingUnit):
 	if civ(losingUnit) == iNative and winningUnit.getUnitType() == iBandeirante and player(winningUnit).canUseSlaves():
 		captureUnit(losingUnit, winningUnit, iSlave, 100)
 		return
-	
-	if players.major().existing().none(lambda p: team(p).isHasTech(iCompass)):
-		return
 		
-	if civ(losingUnit) == iNative:
-		if civ(winningUnit) not in lBioNewWorld or any(data.dFirstContactConquerors.values()):
-			if player(winningUnit).isSlavery() or player(winningUnit).isColonialSlavery():
-				captureUnit(losingUnit, winningUnit, iSlave, 50)
+	if player(winningUnit).isSlavery() or player(winningUnit).isColonialSlavery():
+		captureUnit(losingUnit, winningUnit, iSlave, 50)
+		return
 
 
 @handler("combatResult")
@@ -183,9 +178,10 @@ def validateSlaves(iPlayer):
 
 ### UNIT BUILT ###
 
+# TODO: it seems like iPlayer isn't supplied here, figure out why
 @handler("unitBuilt")
 def moveSlavesToNewWorld(city, unit):
-	if base_unit(unit) == iSlave and city.getRegionID() in lEurope + [rMaghreb, rAnatolia] and not city.isHuman():	
+	if base_unit(unit) == iSlave:
 		colony = cities.owner(iPlayer).regions(*(lAmerica + lSubSaharanAfrica)).random()
 		if colony:
 			move(unit, colony)
@@ -199,9 +195,7 @@ def resetAdminCenterOnPalaceBuilt(city):
 		city.setHasRealBuilding(iAdministrativeCenter, False)
 
 
-
 ### PLOT FEATURE REMOVED ###
-
 
 @handler("plotFeatureRemoved")
 def brazilianMadeireiroAbility(plot, city, iFeature):
@@ -224,8 +218,6 @@ def brazilianMadeireiroAbility(plot, city, iFeature):
 
 @handler("BeginGameTurn")
 def checkImmigration(iGameTurn):
-	if iGameTurn < year(dBirth[iAmerica]) + turns(5):
-		return
 
 	data.iImmigrationTimer -= 1
 	
@@ -236,13 +228,14 @@ def checkImmigration(iGameTurn):
 
 ### TECH ACQUIRED ###
 
-@handler("techAcquired")
-def relocateCapitals(iTech, iTeam, iPlayer):
-	if not player(iPlayer).isHuman():
-		iCiv = civ(iPlayer)
-		iEra = infos.tech(iTech).getEra()
-		if (iCiv, iEra) in dRelocatedCapitals:
-			relocateCapital(iPlayer, dRelocatedCapitals[iCiv, iEra])
+# NOTE seems like a wasteful thing to do at every tech aqcuisition
+# @handler("techAcquired")
+# def relocateCapitals(iTech, iTeam, iPlayer):
+# 	if not player(iPlayer).isHuman():
+# 		iCiv = civ(iPlayer)
+# 		iEra = infos.tech(iTech).getEra()
+# 		if (iCiv, iEra) in dRelocatedCapitals:
+# 			relocateCapital(iPlayer, dRelocatedCapitals[iCiv, iEra])
 
 
 ### END GAME TURN ###
@@ -250,6 +243,7 @@ def relocateCapitals(iTech, iTeam, iPlayer):
 @handler("EndGameTurn")
 def startTimedConquests():
 	for iConqueror, tPlot in data.lTimedConquests:
+		# TODO no me likey timed conquests... make them dynamic!
 		colonialConquest(iConqueror, tPlot)
 	
 	data.lTimedConquests = []
@@ -340,9 +334,6 @@ def getImmigrationValue(city):
 	iValue += max(0, iFoodDifference / 2)
 	iValue += city.getPopulation() / 2
 	
-	if city.getRegionID() in lNorthAmerica:
-		iValue += 5
-	
 	if iValue > 0:
 		iValue += rand(0, 2)
 	
@@ -366,13 +357,25 @@ def getEmigrationValue(city):
 
 
 def immigration():
-	sourcePlayers = players.major().existing().where(lambda p: player(p).getCapitalCity().getRegionID() not in lNewWorld).where(lambda p: cities.owner(p).any(lambda city: getEmigrationValue(city) > 0))
-	targetPlayers = players.major().existing().where(lambda p: player(p).getCapitalCity().getRegionID() in lNewWorld).where(lambda p: cities.owner(p).any(lambda city: getImmigrationValue(city) > 0))
+
+	# before Renaissance, migration only occurs within the same religion
+	if gc.getGame().getCurrentEra() <= iMedieval:
+		iReligion = random([iCatholicism, iOrthodoxy, iIslam, iJudaism, iHinduism, iBuddhism, iConfucianism, iTaoism])
+		if not game.isReligionFounded(iReligion): return
+		sourcePlayers = players.major().existing().where(lambda p: player(p).getCapitalCity().isHasReligion(iReligion)).where(lambda p: cities.owner(p).any(lambda city: getEmigrationValue(city) > 0))
+		targetPlayers = players.major().existing().where(lambda p: player(p).getCapitalCity().isHasReligion(iReligion)).where(lambda p: cities.owner(p).any(lambda city: getImmigrationValue(city) > 0))
+	else:
+		sourcePlayers = players.major().existing().where(lambda p: cities.owner(p).any(lambda city: getEmigrationValue(city) > 0))
+		targetPlayers = players.major().existing().where(lambda p: cities.owner(p).any(lambda city: getImmigrationValue(city) > 0))
 	
 	iNumMigrations = min(sourcePlayers.count(), targetPlayers.count())
+
+	# catch the case where no migrations are possible
+	if iNumMigrations == 0:
+		return
 	
-	sourceCities = sourcePlayers.cities().where(lambda city: city.getRegionID() not in lNewWorld).where(lambda city: city.getPopulation() > 1).highest(iNumMigrations, getEmigrationValue)
-	targetCities = targetPlayers.cities().regions(*lNewWorld).highest(iNumMigrations, getImmigrationValue)
+	sourceCities = sourcePlayers.cities().where(lambda city: city.getPopulation() > 1).highest(iNumMigrations, getEmigrationValue)
+	targetCities = targetPlayers.cities().highest(iNumMigrations, getImmigrationValue)
 	
 	for sourceCity, targetCity in zip(sourceCities, targetCities):
 		iPopulation = 1
@@ -407,6 +410,7 @@ def immigration():
 			targetCity.setHasReligion(random_entry(lReligions), True, True, True)
 					
 		# notify affected players
+		# TODO update even text to remove reference to New World
 		message(iSourcePlayer, 'TXT_KEY_UP_EMIGRATION', sourceCity.getName(), event=InterfaceMessageTypes.MESSAGE_TYPE_MINOR_EVENT, button=infos.unit(iSettler).getButton(), color=iYellow, location=sourceCity)
 		message(iTargetPlayer, 'TXT_KEY_UP_IMMIGRATION', targetCity.getName(), event=InterfaceMessageTypes.MESSAGE_TYPE_MINOR_EVENT, button=infos.unit(iSettler).getButton(), color=iYellow, location=targetCity)
 

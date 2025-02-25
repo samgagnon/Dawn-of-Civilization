@@ -4,7 +4,6 @@ from Core import *
 
 from Events import handler, popup_handler
 
-
 ## CONSTANTS
 
 lJudaismFoundRegions = [rEgypt, rLevant, rMesopotamia]
@@ -12,35 +11,20 @@ lJudaismEuropeRegions = [rIberia, rFrance, rLowerGermany, rCentralEurope, rPolan
 lJudaismMiddleEastRegions = [rLevant, rMesopotamia, rAnatolia, rEgypt]
 lJudaismNewWorldRegions = [rOntario, rMaritimes, rAtlanticSeaboard, rMidwest, rCalifornia]
 
-dCatholicPreference = CivDict({
-iEgypt		: 80,
-iNubia		: 80,
-iGreece		: 80,
-iCelts		: 90,
-iRome		: 95,
-iEthiopia	: 80,
-iByzantium	: 90,
-iNorse		: 20,
-iArabia		: 80,
-iSpain		: 95,
-iFrance		: 75,
-iEngland	: 30,
-iHolyRome	: 55,
-iRus		: 70,
-iPoland		: 80,
-iPortugal	: 95,
-iItaly		: 90,
-iSweden		: 10,
-iRussia		: 80,
-iCongo		: 80,
-iGermany	: 25,
-iNetherlands: 10,
-iAmerica	: 20,
-}, 50)
-
 def getCatholicPreference(iPlayer):
-	return dCatholicPreference[iPlayer]
-
+	# TODO calculate catholic preference based on relation status with holder of catholic holy city
+	pPlayer = player(iPlayer)
+	pPlayerCatholic = game.getHolyCity(iCatholicism).getOwner().getID()
+	iPlayerCatholic = pPlayerCatholic
+	# NOTE I have no idea if this is correct
+	if pPlayer.AI_getAttitude(iPlayerCatholic) >= AttitudeTypes.ATTITUDE_PLEASED:
+		return 95
+	elif pPlayer.AI_getAttitude(iPlayerCatholic) >= AttitudeTypes.ATTITUDE_CAUTIOUS:
+		return 70
+	elif pPlayer.AI_getAttitude(iPlayerCatholic) >= AttitudeTypes.ATTITUDE_ANNOYED:
+		return 50
+	else:
+		return 10
 
 ## HANDLERS
 	
@@ -49,6 +33,7 @@ def getCatholicPreference(iPlayer):
 def onBuildingBuilt(city, iBuilding):
 	iPlayer = city.getOwner()
 
+	# NOTE buddhism is founded by hindu temple, catholicism by orthodox cathedral. this is ok
 	if iBuilding == iHinduTemple:
 		if game.isReligionFounded(iBuddhism): return
 		player(city).foundReligion(iBuddhism, iBuddhism, True)
@@ -66,30 +51,55 @@ def onBuildingBuilt(city, iBuilding):
 			if cities.owner(iPlayer).none(lambda city: city.isHasReligion(iOrthodoxy)):
 				player(city).setLastStateReligion(iCatholicism)
 
-@handler("BeginGameTurn")
-def foundHinduism(iGameTurn):
-	if not player(iIndia).isHuman():
-		if iGameTurn == year(-2000)+1:
-			if not game.isReligionFounded(iHinduism):
-				if plot(92, 39).isCity():
-					foundReligion((92, 39), iHinduism)
-
-
-@handler("cityBuilt")
-def foundIslam(city):
-	if civ(city) == iArabia:
-		if not game.isReligionFounded(iIslam):
-			if at(city, tMecca):
-				foundReligion(location(city), iIslam)
+# @handler("BeginGameTurn")
+# def foundHinduism(iGameTurn): # TODO make Hinduism foundable via tech
+# 	if not player(iIndia).isHuman():
+# 		if iGameTurn == year(-2000)+1:
+# 			if not game.isReligionFounded(iHinduism):
+# 				if plot(92, 39).isCity():
+# 					foundReligion((92, 39), iHinduism)
 
 
 @handler("BeginGameTurn")
-def checkJudaism(iGameTurn):
-	if game.isReligionFounded(iJudaism):
-		return
+def checkIslam(iGameTurn):
+	if not game.isReligionFounded(iCatholicism): return
+	if game.isReligionFounded(iIslam): return
+	
+	if game.countReligionLevels(iCatholicism) < 10: return
+	
+	religionCities = cities.all().religion(iJudaism)
+	minorCities, majorCities = religionCities.split(is_minor)
+	
+	stateReligionCities, noStateReligionCities, differentStateReligionCities = majorCities.buckets(lambda city: player(city).getStateReligion() == iJudaism, lambda city: player(city).getStateReligion() == -1)
+	
+	if not noStateReligionCities and not minorCities: return
+	
+	if stateReligionCities >= noStateReligionCities + minorCities: return
+	
+	jewishCapital = stateReligionCities.where(lambda city: city.isCapital()).maximum(lambda city: player(city).getScoreHistory(iGameTurn))
+	if not jewishCapital:
+		jewishCapital = game.getHolyCity(iJudaism)
+		
+	muslimCities = (noStateReligionCities + minorCities).without(jewishCapital)
+	muslimCapital = muslimCities.where(lambda city: plot(city).getSpreadFactor(iJudaism) >= 3).maximum(lambda city: city.getPopulation())
+	if not muslimCapital:
+		muslimCapital = muslimCities.maximum(lambda city: city.getPopulation())
+	
+	foundReligion(muslimCapital, iIslam)
+	
+	independentCities = differentStateReligionCities + minorCities
 
-	if iGameTurn == year(-1500) - turns(data.iSeed % 5):
-		foundReligion(selectHolyCity(plots.regions(*lJudaismFoundRegions), tJerusalem), iJudaism)
+	# NOTE schism-like function to force independence of islamic cities
+	jihad(muslimCapital, jewishCapital, noStateReligionCities, independentCities)
+	
+
+# @handler("BeginGameTurn")
+# def checkJudaism(iGameTurn): # TODO make Judaism foundable via tech
+# 	if game.isReligionFounded(iJudaism):
+# 		return
+
+# 	if iGameTurn == year(-1500) - turns(data.iSeed % 5):
+# 		foundReligion(selectHolyCity(plots.regions(*lJudaismFoundRegions), tJerusalem), iJudaism)
 
 
 @handler("BeginGameTurn")
@@ -102,7 +112,8 @@ def checkChristianity(iGameTurn):
 	if iGameTurn == year(0) + iOffset:
 		holyCity = game.getHolyCity(iJudaism)
 		
-		if not holyCity.isHuman() and rand(2) == 0:
+		if rand(2) == 0:
+			# TODO: grant evangelist units (missionaries) when Christianity is founded
 			foundReligion(holyCity, iOrthodoxy)
 			return
 			
@@ -142,68 +153,6 @@ def checkSchism(iGameTurn):
 	independentCities = differentStateReligionCities + minorCities
 	schism(orthodoxCapital, catholicCapital, noStateReligionCities, independentCities, message="TXT_KEY_SCHISM_MESSAGE")
 
-
-@handler("BeginGameTurn")
-def spreadJudaism():
-	spreadReligionToRegion(iJudaism, lJudaismEuropeRegions, 1000, 10)
-	spreadReligionToRegion(iJudaism, lJudaismMiddleEastRegions, 600, 20)
-	spreadReligionToRegion(iJudaism, lJudaismNewWorldRegions, 1850, 10)
-
-
-@handler("BeginGameTurn")
-def spreadHinduismSoutheastAsia():
-	lSouthEastAsianCivs = [iKhmer, iMalays, iJava]
-
-	if not game.isReligionFounded(iHinduism): return
-	if none(player(iCiv).isExisting() for iCiv in lSouthEastAsianCivs): return
-	if not turn().between(500, 1200): return
-	
-	if not periodic(20): return
-	
-	contacts = players.major().where(lambda p: any(player(q).canContact(p) for q in lSouthEastAsianCivs) and player(p).getStateReligion() in [iHinduism, iBuddhism])
-	if not contacts:
-		return
-	
-	southEastAsiaCities = cities.regions(rIndochina, rIndonesia)
-	potentialCities = southEastAsiaCities.where(lambda city: not city.isHasReligion(iHinduism))
-	
-	iMaxCitiesMultiplier = 2
-	if len(potentialCities) * iMaxCitiesMultiplier >= len(southEastAsiaCities):
-		spreadCity = potentialCities.random()
-		if spreadCity:
-			spreadCity.spreadReligion(iHinduism)
-
-
-@handler("BeginGameTurn")
-def spreadIslamIndonesia():
-	if not game.isReligionFounded(iIslam): 
-		return
-		
-	if not player(iJava).isExisting() and not player(iMalays).isExisting(): 
-		return
-
-	if not turn().between(1250, 1600): 
-		return
-	
-	if not periodic(10): 
-		return
-	
-	indonesianContacts = players.major().where(lambda p: (player(iJava).canContact(p) or player(iMalays).canContact(p)) and player(p).getStateReligion() == iIslam)
-	if not indonesianContacts:
-		return
-		
-	indonesianCities = cities.region(rIndonesia)
-	potentialCities = indonesianCities.where(lambda c: not c.isHasReligion(iIslam))
-	
-	iMaxCitiesMultiplier = 2
-	if player(iMalays).getStateReligion() == iIslam or player(iJava).getStateReligion() == iIslam: iMaxCitiesMultiplier = 5
-	
-	if len(potentialCities) * iMaxCitiesMultiplier >= len(indonesianCities):
-		spreadCity = potentialCities.random()
-		if spreadCity:
-			spreadCity.spreadReligion(iIslam)
-
-
 @handler("techAcquired")
 def checkReformation(iTech, iTeam, iPlayer):
 	if scenario() == i1700AD:
@@ -228,7 +177,7 @@ def checkReformationOnSpawn(city):
 				player(city.getOwner()).foundReligion(iProtestantism, iProtestantism, True)
 				reformation()
 
-
+# NOTE this seems to handle natural religion founding events (via tech discovery)
 @handler("techAcquired")
 def lateReligionFounding(iTech):
 	if scenario() == i1700AD:
@@ -291,6 +240,16 @@ def schism(orthodoxCapital, catholicCapital, replace, distant, message):
 	for iPlayer in players.major().existing().ai().religion(iOrthodoxy):
 		if 2 * replace.owner(iPlayer).count() >= player(iPlayer).getNumCities():
 			player(iPlayer).setLastStateReligion(iCatholicism)
+
+
+def jihad(muslimCapital, jewishCapital, replace, distant):
+	replace += distant.where(lambda city: distance(city, muslimCapital) <= distance(city, jewishCapital))
+	for city in replace:
+		city.replaceReligion(iJudaism, iIslam)
+		
+	for iPlayer in players.major().existing().ai().religion(iJudaism):
+		if 2 * replace.owner(iPlayer).count() >= player(iPlayer).getNumCities():
+			player(iPlayer).setLastStateReligion(iIslam)
 
 
 def reformation():				

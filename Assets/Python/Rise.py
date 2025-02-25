@@ -109,6 +109,7 @@ def checkBirths():
 		birth.check()
 
 
+# NOTE i have no idea what this does
 @handler("changeWar")
 def ensureAdditionalDefenders(bWar, iAttacker, iDefender, bFromDefensivePact):
 	if not bWar:
@@ -148,9 +149,11 @@ def spawnWarUnits(bWar, iAttacker, iDefender, bFromDefensivePact):
 		for iUnit, iAmount in getSpecificAdditionalUnits(iDefender):
 			makeUnits(iDefender, iUnit, city, iAmount)
 
-
+# NOTE balance for ai rising civs. not clear if needed, let's try without
 @handler("changeWar")
 def balanceMilitary(bWar, iAttacker, iDefender, bFromDefensivePact):
+	return
+
 	if not bWar:
 		return
 	
@@ -172,7 +175,7 @@ def balanceMilitary(bWar, iAttacker, iDefender, bFromDefensivePact):
 	if not iAttackerPower:
 		return
 	
-	iPowerRatioThreshold = player(iAttacker).isHuman() and 80 or 50
+	iPowerRatioThreshold = 50
 	iPowerRatio = 100 * iDefenderPower / iAttackerPower
 	
 	iMaxAdditionalPower = 50
@@ -190,7 +193,7 @@ def balanceMilitary(bWar, iAttacker, iDefender, bFromDefensivePact):
 		iUnitsPower += sum(infos.unit(iUnit).getPowerValue() * iAmount for iUnit, iAmount in specificAdditionalUnits)
 		
 		iAdditionalUnitsRequired = iUnitsPower > 0 and iPowerRequired / iUnitsPower or 1
-		
+
 		for _ in range(iAdditionalUnitsRequired):
 			createRoleUnits(iDefender, capital(iDefender), additionalUnits)
 			for iUnit, iAmount in specificAdditionalUnits:
@@ -226,12 +229,6 @@ def moveOutAttackers(bWar, iAttacker, iDefender):
 @handler("changeWar")
 def createExpansionUnits(bWar, iAttacker, iDefender):
 	if not bWar:
-		return
-	
-	if player(iAttacker).isHuman():
-		return
-		
-	if player(iDefender).isBirthProtected():
 		return
 	
 	if is_minor(iDefender):
@@ -295,14 +292,15 @@ def createStartingWorkers(city):
 @handler("firstCity")
 def createInvaderSettlers(city):
 	iPlayer = city.getOwner()
-	if not civ(iPlayer) in lInvasionCivs:
-		return
-	
-	iNumSettlers = dStartingUnits[iPlayer].get(iSettler, 0)
+	# if not civ(iPlayer) in lInvasionCivs:
+	# 	return
+	# NOTE attempt at regularizing number of settlers per new civ
+	iNumSettlers = 2
+	# iNumSettlers = dStartingUnits[iPlayer].get(iSettler, 0)
 	if iNumSettlers > 0:
 		createSettlers(iPlayer, iNumSettlers, bGrantCapital=False)
 
-
+# NOTE no idea what this does
 @handler("firstCity")
 def restorePreservedWonders(city):
 	while data.players[city.getOwner()].lPreservedWonders:
@@ -507,7 +505,7 @@ class Birth(object):
 		if not closest:
 			return plots.none()
 		
-		closePlots, farPlots = neighbourPlots.split(lambda p: distance(closest, p) <= distance(furthest, p))
+		closePlots, _ = neighbourPlots.split(lambda p: distance(closest, p) <= distance(furthest, p))
 		return closePlots
 	
 	def revealTerritory(self):
@@ -553,6 +551,7 @@ class Birth(object):
 		if bCanPeerReveal:
 			revealed += peerRevealed
 		
+		# NOTE this makes perfect sense, but what if we didn't use this?
 		# for AI, reveal nearby settler targets to improve settler AI
 		if not self.isHuman():
 			revealed += plots.all().land().where(lambda p: p.getSettlerValue(self.iCiv) >= 10).where(lambda p: distance(self.location, p) <= 15).expand(2)
@@ -562,13 +561,8 @@ class Birth(object):
 			plot.setRevealed(self.team.getID(), True, False, -1)
 	
 	def createUnits(self):
-		bInvasionCiv = self.iCiv in lInvasionCivs
 		
-		createRoleUnits(self.iPlayer, self.location, getStartingUnits(self.iPlayer), bCreateSettlers=not bInvasionCiv)
-		
-		# if invader but no cities in birth, still grant a settler now
-		if bInvasionCiv and not cities.birth(self.iPlayer):
-			createRoleUnit(self.iPlayer, self.location, iSettle)
+		createRoleUnits(self.iPlayer, self.location, getStartingUnits(self.iPlayer), bCreateSettlers=True)
 		
 		# only create units if coming from autoplay, otherwise after the switch
 		if self.iPlayer == active():
@@ -701,13 +695,13 @@ class Birth(object):
 				if year(dBirth[active()]) > year(dFall[self.iCiv]) + turns(20):
 					return False
 		
-		# Byzantium requires Rome to be alive and Greece to be dead (human Rome can avoid Byzantine spawn by being solid)
+		# Byzantium requires Rome to be alive and Greece to be dead
 		if self.iCiv == iByzantium:
 			if not player(iRome).isExisting():
 				return False
 			elif player(iGreece).isExisting():
 				return False
-			elif player(iRome).isHuman() and stability(iRome) == iStabilitySolid:
+			elif stability(iRome) == iStabilitySolid:
 				return False
 		
 		# Italy requires Rome to be dead
@@ -717,13 +711,13 @@ class Birth(object):
 		
 		# Aztecs require Toltecs to be dead
 		if self.iCiv == iAztecs:
-			iRequiredStability = player(iToltecs).isHuman() and iStabilityUnstable or iStabilityShaky
+			iRequiredStability = iStabilityShaky
 			if player(iToltecs).isExisting() and stability(iToltecs) >= iRequiredStability:
 				return False
 		
 		# Ottomans require that the Turks managed to conquer at least one city in the Near East
 		if self.iCiv == iOttomans:
-			if cities.birth(iOttomans).none(CyCity.isHuman) and cities.regions(rAnatolia, rCaucasus, rLevant, rMesopotamia).none(lambda city: iTurks in [city.getCivilizationType(), city.getPreviousCiv()]):
+			if cities.regions(rAnatolia, rCaucasus, rLevant, rMesopotamia).none(lambda city: iTurks in [city.getCivilizationType(), city.getPreviousCiv()]):
 				return False
 		
 		# Iran requires Persia to be dead
@@ -1003,9 +997,6 @@ class Birth(object):
 	def flippedArea(self):
 		if self.iCiv == iEngland and player(iCelts).isHuman():
 			return plots.birth(self.iPlayer, extended=False)
-		
-		if self.iCiv == iRussia and (player(iRussia).isHuman() or player(iRus).isHuman()):
-			return plots.birth(self.iPlayer).without(plots.rectangle(tNovgorod))
 	
 		return self.isIndependence() and self.area or plots.birth(self.iPlayer)
 	

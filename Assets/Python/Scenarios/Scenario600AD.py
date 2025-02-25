@@ -163,8 +163,7 @@ def createStartingUnits():
 	
 	# Korea
 	capital = plots.capital(iKorea)
-	if not player(iKorea).isHuman():
-		makeUnits(iKorea, iHeavySwordsman, capital, 2)
+	makeUnits(iKorea, iHeavySwordsman, capital, 2)
 	
 	# Khmer
 	capital = plots.capital(iKhmer)
@@ -183,14 +182,13 @@ def createStartingUnits():
 	
 	# Japan
 	capital = plots.capital(iJapan)
-	if not player(iJapan).isHuman():
-		makeUnits(iJapan, iCrossbowman, capital, 2)
-		makeUnits(iJapan, iSamurai, capital, 3)
+	makeUnits(iJapan, iCrossbowman, capital, 2)
+	makeUnits(iJapan, iSamurai, capital, 3)
 	
 	# Norse
 	capital = plots.capital(iNorse)
 	createRoleUnit(iNorse, capital, iWorkerSea)
-	createRoleUnit(iNorse, capital, iExploreSea, player(iNorse).isHuman() and 2 or 3)
+	createRoleUnit(iNorse, capital, iExploreSea, 3)
 
 
 def setupGoals(iCiv, goals):

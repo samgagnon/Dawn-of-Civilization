@@ -21,13 +21,16 @@ lCivilizations = [
 		techs=techs.of(iTanning, iMythology)
 	),
 	Civilization(
-		iIndependent2
+		iIndependent2,
+		techs=techs.of(iTanning, iMining, iPottery, iAgriculture)
 	),
 	Civilization(
-		iIndependent
+		iIndependent,
+		techs=techs.of(iTanning, iMining, iPottery, iAgriculture)
 	),
 ]
 
+# TODO add a hell of a lot more of these
 lTribalVillages = [
 	((121, 42), (129, 48)), # South China
 	((71, 56), (78, 61)), # Balkans
@@ -36,8 +39,7 @@ lTribalVillages = [
 
 
 def createStartingUnits():
-	if not player(iEgypt).isHuman():
-		makeUnit(iEgypt, iArcher, plots.capital(iEgypt))
+	makeUnit(iEgypt, iArcher, plots.capital(iEgypt))
 
 
 scenario3000BC = Scenario(

@@ -30,8 +30,8 @@ def calculateCityFood(site, tileFood):
 		iFood += tileFood[index]
 		
 		# coastal cities receive Harbor food
-		#if site.isCoastalLand() and plot.isWater():
-		#	iFood += 1
+		# if site.isCoastalLand() and plot.isWater():
+		# 	iFood += 1
 	
 	return iFood
 

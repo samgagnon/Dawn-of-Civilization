@@ -1,0 +1,8 @@
+1. Remove stability checks as a feature. Simply update stability when the relevant 
+attributes change (e.g. economy grows, happiness increases) and check for collapse then 
+
+2. Normalize starting packages for each civilization
+
+3. Make conquerors dynamic
+
+4. 

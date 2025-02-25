@@ -23,7 +23,7 @@ dCompanyExpiry = defaultdict({
 	iSilkRoute : 1500,
 	iTradingCompany : 1800,
 	iTextileIndustry : 1920,
-}, 2020)
+}, 3000)
 					
 	
 @handler("cityAcquired")
@@ -124,30 +124,20 @@ def getCityValue(city, iCompany):
 	if has_civic(owner, iFreeEnterprise):
 		iValue += 1
 
-	# civilization requirements
-	if iCompany == iTradingCompany:
-		if iOwnerCiv not in dCivGroups[iCivGroupEurope]:
-			return -1
-		if iOwnerCiv == iNetherlands:
-			iValue += 2
-	elif iCompany == iSilkRoute:
-		if city.getRegionID() in [rTarimBasin, rTransoxiana, rHinduKush, rKhorasan, rPersia]:
-			iValue += 2
-		elif city.getRegionID() in [rSouthChina, rNorthChina]:
-			iValue -= 2
-	
-	# geographical requirements
+	# geographic requirements
 	if iCompany == iSilkRoute:
-		if city.getRegionID() not in [rMongolia, rTarimBasin, rTransoxiana, rKhorasan, rHinduKush, rPersia, rMesopotamia, rLevant]:
+		if city.getRegionID() in [rTarimBasin, rTransoxiana, rHinduKush, rKhorasan, rPersia, rSouthChina, rNorthChina]:
+			iValue += 2
+		elif city.getRegionID() not in [rMongolia, rTibet, rSiberia, rManchuria, rKorea, rIndochina, rIndonesia, rPhilippines, rMesopotamia, rLevant]:
 			return -1
 			
 	elif iCompany == iTradingCompany:
 		if not city.isHasRealBuilding(unique_building(city.getOwner(), iTradingCompanyBuilding)):
-			if city.getRegionID() not in [rCaribbean, rArabia, rDeccan, rDravida, rBengal, rIndochina, rIndonesia, rPhilippines] + lSubSaharanAfrica:
-				return -1
-			
 			if not city.isCoastal(20):
 				return -1
+			
+			if city.getRegionID() in [rCaribbean, rArabia, rDeccan, rDravida, rBengal, rIndochina, rIndonesia, rPhilippines] + lSubSaharanAfrica:
+				iValue += 2
 	
 		if city.getRegionID() == rCaribbean:
 			iValue += 1
@@ -160,11 +150,6 @@ def getCityValue(city, iCompany):
 	# penalty for silk route if coastal (mitigatable by harbor)
 	if iCompany == iSilkRoute:
 		if city.isCoastal(20):
-			iValue -= 1
-	
-	# religions
-	if iCompany == iSilkRoute:
-		if owner.getStateReligion() in [iProtestantism, iCatholicism, iOrthodoxy]:
 			iValue -= 1
 	
 	# various bonuses

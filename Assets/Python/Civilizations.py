@@ -86,8 +86,10 @@ def initBuildingPreferences(iPlayer):
 		
 @handler("playerCivAssigned")
 def onPlayerCivAssigned(iPlayer):
-	initPlayerTechPreferences(iPlayer)
-	initBuildingPreferences(iPlayer)
+	# initPlayerTechPreferences(iPlayer)
+	# initBuildingPreferences(iPlayer)
+	# NOTE what happens if I ignore all preferences?
+	pass
 	
 
 ### Civilization starting attributes ###

@@ -70,11 +70,9 @@ def completeCollapse(iPlayer):
 		
 def downgradeImprovements(iPlayer):
 	lAlwaysDowngrade = [iCottage, iHamlet, iVillage, iTown]
-	# NOTE Harappa and Toltecs are hardcoded here, why?
-	bPlayerDowngrade = civ(iPlayer) in [iHarappa, iToltecs] and not player(iPlayer).isHuman()
 	
 	improvementPlots = plots.owner(iPlayer).where(lambda p: p.getImprovementType() >= 0)
-	alwaysDowngrade, potentialDowngrade = improvementPlots.split(lambda p: p.getImprovementType() in lAlwaysDowngrade or bPlayerDowngrade)
+	alwaysDowngrade, potentialDowngrade = improvementPlots.split(lambda p: p.getImprovementType() in lAlwaysDowngrade)
 	
 	if player(iPlayer).getCurrentEra() <= iRenaissance:
 		iFraction = 4
@@ -105,24 +103,15 @@ def downgradeImprovements(iPlayer):
 		
 def collapseToCore(iPlayer):
 	nonCoreCities = cities.owner(iPlayer).where(lambda city: not city.isPlayerCore(iPlayer))
-	ahistoricalCities = nonCoreCities.where(lambda city: plot(city).getPlayerSettlerValue(iPlayer) == 0)
 	
 	# release all vassals
 	for iVassal in players.vassals(iPlayer):
 		team(iVassal).setVassal(player(iPlayer).getTeam(), False, False)
 				
-	# more than half ahistorical, only secede ahistorical cities
-	# TODO remove all references to ahistorical cities, make no distinction between ahistorical and historical
-	if 2 * ahistoricalCities.count() > nonCoreCities.count():
+	# TODO add possibility for only some cities to secede
 	
-		# notify owner
-		message(iPlayer, 'TXT_KEY_STABILITY_FOREIGN_SECESSION', color=iRed)
-				
-		# secede all foreign cities
-		secession(iPlayer, ahistoricalCities)
-		
-	# otherwise, secede all cities outside of core
-	elif nonCoreCities:
+	# secede all cities outside of core
+	if nonCoreCities:
 	
 		# notify owner
 		message(iPlayer, 'TXT_KEY_STABILITY_COLLAPSE_TO_CORE', color=iRed)

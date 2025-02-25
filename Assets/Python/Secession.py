@@ -28,6 +28,7 @@ def secedeCities(iPlayer, secedingCities, bRazeMinorCities = False):
 	for city in destroyedCities:
 		player(iBarbarian).disband(city)
 		plot(city).setCulture(iPlayer, 0, True)
+		# TODO spawn barbarians in plot(city)
 	
 	# determine who has the best claim on each city
 	dClaimedCities = appenddict()
@@ -72,27 +73,12 @@ def canBeRazed(city):
 	
 	if city.getNumActiveWorldWonders() > 0:
 		return False
-
-	# always raze Harappan cities, except holy city
-	if civ(city) == iHarappa and not player(city).isHuman():
-		return True
-	
-	if city.getPopulation() >= 10:
-		return False
-	
-	if city.getCultureLevel() >= 3:
-		return False
 		
 	if city.isCapital():
 		return False
 	
-	if city.at(*tJerusalem):
-		return False
-	
-	closest = closestCity(city, city.getOwner(), same_continent=True)
-	if closest and distance(city, closest) <= 2:
-		if city.getCultureLevel() <= closest.getCultureLevel() and city.getPopulation() < closest.getPopulation():
-			return True
+	if (city.getPopulation() < 10) and (city.getCultureLevel() < 3):
+		return True
 	
 	return False
 
@@ -105,13 +91,6 @@ def getCityClaim(city):
 	if coreClaims:
 		return civ(coreClaims.maximum(lambda p: plot(city).getPlayerSettlerValue(p)))
 	
-	# claim based on original owner, unless lost a long time ago
-	iOriginalOwner = possibleClaims.ai().where(city.isOriginalOwner).first()
-	if iOriginalOwner is not None:
-		if plot(city).getPlayerSettlerValue(iOriginalOwner) > 0:
-			if city.getGameTurnPlayerLost(iOriginalOwner) >= turn() - turns(50):
-				return civ(iOriginalOwner)
-	
 	# claim based on culture
 	iTotalCulture = plot(city).countTotalCulture()
 	cultureClaims = possibleClaims.ai().where(lambda p: iTotalCulture > 0 and 100 * plot(city).getCulture(p) / iTotalCulture >= 75)
@@ -119,16 +98,13 @@ def getCityClaim(city):
 		iCultureClaim = cultureClaims.maximum(lambda p: plot(city).getCulture(p))
 		return civ(iCultureClaim)
 	
-	# claim based on war targets: needs to be winning the war based on war success, not available to human player
-	closest = closestCity(city, same_continent=True)
-	warClaims = possibleClaims.without(active()).where(lambda p: team(p).isAtWar(team(iOwner).getID()) and plot(city).getPlayerWarValue(p) >= 4)
-	warClaims = warClaims.where(lambda p: team(p).AI_getAtWarCounter(player(iOwner).getTeam()) >= turns(10) and team(p).AI_getWarSuccess(player(iOwner).getTeam()) >= scale(20) and team(p).AI_getWarSuccess(team(iOwner).getID()) > team(iOwner).AI_getWarSuccess(team(p).getID()))
-	warClaims = warClaims.where(lambda p: not closest or closest.getOwner() == p or not team(iOwner).isAtWar(closest.getOwner()))
-	warClaims = warClaims.where(lambda p: closestCity(city, owner=p, same_continent=True) and distance(city, closestCity(city, owner=p, same_continent=True)) <= 12)
-	if warClaims:
-		iWarClaim = warClaims.maximum(lambda p: team(p).AI_getWarSuccess(team(iOwner).getID()) - team(iOwner).AI_getWarSuccess(team(p).getID()))
-		return civ(iWarClaim)
-	
+	# claim based on original owner, unless lost a long time ago
+	iOriginalOwner = possibleClaims.ai().where(city.isOriginalOwner).first()
+	if iOriginalOwner is not None:
+		if plot(city).getPlayerSettlerValue(iOriginalOwner) > 0:
+			if city.getGameTurnPlayerLost(iOriginalOwner) >= turn() - turns(50):
+				return civ(iOriginalOwner)
+
 	# claim for dead civilisation that can be resurrected
 	resurrections = civs.major().before_fall().without(iOwner).where(canRespawn).where(lambda c: city in cities.respawn(c))
 	if resurrections:
@@ -157,11 +133,7 @@ def secedeCity(city, iNewOwner, bRelocate, iArmyPercent):
 	else:
 		killUnits(lRelocatedUnits)
 	
-	flipped_city = completeCityFlip(city, iNewOwner, city.getOwner(), 50, False, True, True)
-	
-	if flipped_city and civ(iOldOwner) == iToltecs:
-		removeBuildings(flipped_city)
-	
+	# NOTE not sure I like nerfing minor civs like this
 	if not player(iNewOwner).isMinorCiv():
 		flipOrCreateDefenders(iNewOwner, lFlippedUnits, tile, iNumDefenders)
 	else:

@@ -277,16 +277,8 @@ def checkLostCoreCollapse(iPlayer):
 		debug('Collapse from lost core: ' + pPlayer.getCivilizationShortDescription(0))
 		scheduleCollapse(iPlayer)
 
-# NOTE I don't fully understand this functio
 def determineStabilityThreshold(iPlayer, iCurrentLevel):
 	iThreshold = 10 * iCurrentLevel - 10
-	
-	if isDecline(iPlayer): 
-		iThreshold += 10
-		
-		# not that decline already reduces impact by 1
-		if getImpact(iPlayer) == iImpactMarginal:
-			iThreshold += 5
 	
 	return iThreshold
 	
@@ -294,7 +286,6 @@ def determineStabilityLevel(iPlayer, iCurrentLevel, iStability):
 	iThreshold = determineStabilityThreshold(iPlayer, iCurrentLevel)
 	
 	if iStability >= iThreshold: return min(iStabilitySolid, iCurrentLevel + 1)
-	elif isDecline(iPlayer): return max(iStabilityCollapsing, iCurrentLevel - (iThreshold - iStability) / 10)
 	elif iStability < iThreshold - 10: return max(iStabilityCollapsing, iCurrentLevel - 1)
 	
 	return iCurrentLevel
@@ -524,10 +515,7 @@ def calculateStability(iPlayer):
 	
 	# Core vs. Periphery Populations
 	iSeparatismExcess = 100 * iSeparatism / iAdministration - 100
-		
-	if iSeparatismExcess > 0:
-		# NOTE why 25?
-		iCorePeripheryStability -= int(25 * sigmoid(1.0 * iSeparatismExcess / 100))
+	iCorePeripheryStability -= int(25 * sigmoid(1.0 * iSeparatismExcess / 100))
 		
 	lParameters[iParameterCorePeriphery] = iCorePeripheryStability
 	lParameters[iParameterAdministration] = iAdministration
@@ -589,16 +577,7 @@ def calculateStability(iPlayer):
 	iDomesticStability = 0
 	
 	# Happiness
-	iHappinessStability = calculateTrendScore(data.players[iPlayer].lHappinessTrend)
-	
-	# TODO use sigmoid instead
-	if iHappinessStability > 5: iHappinessStability = 5
-	if iHappinessStability < -5: iHappinessStability = -5
-	
-	# NOTE why soften the blow for AI?
-	if not player(iPlayer).isHuman() and iHappinessStability < 0:
-		iHappinessStability *= 2
-		iHappinessStability /= 3
+	iHappinessStability = 5*sigmoid(calculateTrendScore(data.players[iPlayer].lHappinessTrend))
 	
 	lParameters[iParameterHappiness] = iHappinessStability
 	
@@ -718,13 +697,15 @@ def calculateStability(iPlayer):
 	iTheocracyStability = 0
 	iMultilateralismStability = 0
 	
-	iNumContacts = 0
-	iFriendlyRelations = 0
-	iFuriousRelations = 0
-	
 	lContacts = []
-	
+
+	# list of relevant civilizations
 	for iLoopPlayer in players.major():
+		if tPlayer.canContact(iLoopPlayer):
+			lContacts.append(iLoopPlayer)
+	
+	# NOTE this can be quite long
+	for iLoopPlayer in lContacts:
 		pLoopPlayer = player(iLoopPlayer)
 		tLoopPlayer = team(iLoopPlayer)
 		iLoopScore = pLoopPlayer.getScoreHistory(turn())
@@ -745,19 +726,10 @@ def calculateStability(iPlayer):
 			
 			if iVassalage in civics: iVassalStability += 2
 			
-		# relations
-		# TODO do this before the big loop so we don't waste time
-		if tPlayer.canContact(iLoopPlayer):
-			lContacts.append(iLoopPlayer)
-			
 		# defensive pacts
 		if tPlayer.isDefensivePact(iLoopPlayer):
 			if iLoopScore > iPlayerScore: iDefensivePactStability += 3
 			if iMultilateralism in civics: iDefensivePactStability += 3
-		
-		# worst enemies
-		if pLoopPlayer.getWorstEnemy() == iPlayer:
-			if iLoopScore > iPlayerScore: iRelationStability -= 3
 			
 		# wars
 		if tPlayer.isAtWar(iLoopPlayer):
@@ -777,7 +749,8 @@ def calculateStability(iPlayer):
 	lParameters[iParameterTheocracy] = iTheocracyStability
 	lParameters[iParameterMultilateralism] = iMultilateralismStability
 			
-	iForeignStability += iVassalStability + iDefensivePactStability + iNationhoodStability + iTheocracyStability + iMultilateralismStability
+	iForeignStability += iVassalStability + iDefensivePactStability + iNationhoodStability + \
+		iTheocracyStability + iMultilateralismStability
 	
 	# MILITARY
 	
@@ -1006,9 +979,6 @@ def updateEconomyTrend(iPlayer):
 	iPositiveThreshold = 5
 	iNegativeThreshold = 0
 	
-	if isDecline(iPlayer):
-		iNegativeThreshold = 2
-	
 	if iCivicEconomy == iCentralPlanning: iNegativeThreshold = 0
 	
 	iPercentChange = 100 * iCurrentCommerce / iPreviousCommerce - 100
@@ -1038,12 +1008,10 @@ def updateHappinessTrend(iPlayer):
 		iPopulation = city.getPopulation()
 		iHappiness = city.happyLevel()
 		iUnhappiness = city.unhappyLevel(0)
-		iOvercrowding = city.getOvercrowdingPercentAnger(0) * city.getPopulation() / 1000
-		iCorporationUnhappinessOffset = min(city.getCorporationBadHappiness(), 3 * city.getCorporationCount())
 		
-		if city.isWeLoveTheKingDay() or (iPopulation >= iAveragePopulation and iHappiness - iUnhappiness >= iAveragePopulation / 4):
+		if city.isWeLoveTheKingDay() or (iUnhappiness - iHappiness <= 0):
 			iHappyCities += 1
-		elif iUnhappiness - iOvercrowding - iCorporationUnhappinessOffset > iPopulation / 5 or iUnhappiness - iHappiness > 0:
+		elif iUnhappiness - iHappiness > 0:
 			iUnhappyCities += 1
 			
 	iCurrentTrend = 0
@@ -1051,6 +1019,7 @@ def updateHappinessTrend(iPlayer):
 	if iHappyCities - iUnhappyCities > math.ceil(iNumCities / 5.0): iCurrentTrend = 1
 	elif iUnhappyCities - iHappyCities > math.ceil(iNumCities / 5.0): iCurrentTrend = -1
 	
+	# TODO check to see if this results in an infinite happy loop
 	data.players[iPlayer].pushHappinessTrend(iCurrentTrend)
 	
 def updateWarTrend(iPlayer, iEnemy):
@@ -1150,6 +1119,6 @@ def getAdministrationModifier(iPlayer):
 def isDecline(iPlayer):
 	# TODO refactor rules for decline, I don't like scripted collapse years
 	# TODO add a script that can postpone dFall if certain criteria are met?
-	return not player(iPlayer).isHuman() and year() >= year(dFall[iPlayer])
+	return False
 
 		

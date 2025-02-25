@@ -1,5 +1,8 @@
 # Rhye's and Fall of Civilization - Dynamic resources
 
+# TODO Columbian exchange resource spread (corn, potatoes, chocolate, tobacco, etc.)
+# TODO Columbian exchange resource removal (gold, silver, etc.)
+
 from CvPythonExtensions import *
 import CvUtil
 import PyHelpers
@@ -374,7 +377,7 @@ def removeFeatures(iGameTurn):
 	for tile in dRemovedFeatures[game.getGameTurn()]:
 		plot(tile).setFeatureType(-1, 0)
 
-
+# TODO review how conquerors are spawned
 @handler("conquerors")
 def changeConquerorPlotTypes(iConquerorPlayer, iTargetPlayer):
 	iTargetCiv = civ(iTargetPlayer)
@@ -391,7 +394,8 @@ def spreadCivGroupResourcesOnConquest(iPlayer, city):
 def spreadCivGroupResourcesOnFounding(city):
 	spreadCivGroupResources(city)
 
-
+# NOTE ad hoc, but makes sense. Maybe we should spread potatoes and corn as well? 
+# columbian exchange is extremely important and not well-modeled in the game
 def spreadCivGroupResources(city):
 	for iCivGroup, lResources in dCivGroupResources:
 		if city.getCivilizationType() in dCivGroups[iCivGroup]:

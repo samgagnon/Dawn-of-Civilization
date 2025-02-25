@@ -6,16 +6,18 @@ from Events import handler
 
 def applyMap(iCivilization, iPeriod=-1):
 	for p in plots.all().land():
-		p.setSettlerValue(iCivilization, 0)
+		# NOTE changed from 0 to 5
+		p.setSettlerValue(iCivilization, 5)
 
-	for (x, y), iValue in FileMap.read("Settler/%s.csv" % civ_name(iCivilization)):
-		if iValue and not plot(x, y).isWater():
-			plot(x, y).setSettlerValue(iCivilization, iValue)
+	# TODO what happens if we set all tiles equal to zero?
+	# for (x, y), iValue in FileMap.read("Settler/%s.csv" % civ_name(iCivilization)):
+	# 	if iValue and not plot(x, y).isWater():
+	# 		plot(x, y).setSettlerValue(iCivilization, iValue)
 	
-	if iPeriod != -1:
-		for (x, y), iValue in FileMap.read("Settler/Period/%s.csv" % dPeriodNames[iPeriod], bIgnoreMissing=True):
-			if not plot(x, y).isWater():
-				plot(x, y).setSettlerValue(iCivilization, iValue)
+	# if iPeriod != -1:
+	# 	for (x, y), iValue in FileMap.read("Settler/Period/%s.csv" % dPeriodNames[iPeriod], bIgnoreMissing=True):
+	# 		if not plot(x, y).isWater():
+	# 			plot(x, y).setSettlerValue(iCivilization, iValue)
 		
 def init():
 	for iCivilization in lBirthOrder:

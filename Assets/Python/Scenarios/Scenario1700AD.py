@@ -232,6 +232,7 @@ lCivilizations = [
 	),
 ]
 
+# TODO moar tribal villages
 lTribalVillages = [
 	((130, 20), (141, 23)), # Northern Australia
 	((138, 9), (143, 17)), # Eastern Australia

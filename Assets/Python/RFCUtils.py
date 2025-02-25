@@ -320,10 +320,7 @@ def colonialConquest(iPlayer, tPlot):
 def colonialAcquisition(iPlayer, tPlot):
 	iCiv = civ(iPlayer)
 
-	if iCiv in [iSpain, iPortugal]:
-		iNumUnits = 1
-	elif iCiv in [iFrance, iEngland, iNetherlands]:
-		iNumUnits = 2
+	iNumUnits = 2
 		
 	plot = plot_(tPlot)
 	if plot.isCity():
@@ -355,32 +352,22 @@ def colonialAcquisition(iPlayer, tPlot):
 def getColonialTargets(iPlayer, bEmpty=False):
 	iCiv = civ(iPlayer)
 	
-	dNumCities = {
-		iFrance: 2,
-		iSpain: 1,
-		iEngland: 4,
-		iPortugal: 5,
-		iNetherlands: 4,
-	}
-	
-	iNumCities = dNumCities[iCiv]
-	if player(iPlayer).isHuman():
-		iNumCities = min(3, iNumCities)
+	iNumCities = 5
 		
 	lColonialRegions = [iRegion for iRegion in lAsia if iRegion != rLevant]
-	if iCiv == iPortugal:
-		lColonialRegions += lSubSaharanAfrica
+	lColonialRegions += lSubSaharanAfrica
 		
 	targetPlots = plots.all().coastal().regions(*lColonialRegions)
 	
 	cityPlots, emptyPlots = targetPlots.split(CyPlot.isCity)
-	targetCities = cityPlots.notowner(iPlayer).where(lambda p: p.getWarValue(iCiv) > 1).highest(iNumCities, metric=lambda p: p.getWarValue(iCiv))
+	targetCities = cityPlots.notowner(iPlayer).shuffle().limit(iNumCities)
 	
 	if bEmpty:
 		nearbyCityPlots, settlePlots = emptyPlots.split(lambda p: plots.surrounding(p).any(CyPlot.isCity))
 		
-		targetPlots = settlePlots.where(lambda p: p.getSettlerValue(iCiv) > 0).sample_priority(iNumCities - len(targetCities), lambda p: p.getSettlerValue(iCiv))
-		targetPlots += nearbyCityPlots.expand(1).where(lambda p: p.isCity() and p.getOwner() != iPlayer).sample_priority(iNumCities - len(targetCities) - len(targetPlots), lambda p: p.getSettlerValue(iCiv))
+		# NOTE removed settlervalue checks. might be a disaster but we'll see
+		targetPlots = settlePlots.shuffle().limit(iNumCities - len(targetCities))
+		targetPlots += nearbyCityPlots.expand(1).where(lambda p: p.isCity() and p.getOwner() != iPlayer).shuffle().limit(iNumCities - len(targetCities) - len(targetPlots))
 		
 		return targetCities + targetPlots
 	

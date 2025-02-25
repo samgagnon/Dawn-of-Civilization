@@ -264,40 +264,37 @@ def killUnitsByPlague(city, pPlot, baseValue, iDamage, iPreserveDefenders):
 	iOwner = city.getOwner()
 	pOwner = player(city)
 	teamOwner = team(city)
-	
-	#deadly plague when human player isn't born yet, will speed up the loading
-	if turn() < year(dBirth[active()]) + turns(20):
-		iDamage += 10
-		baseValue -= 5
 
-	iPreserveHumanDefenders = iPreserveDefenders
-	if iPreserveDefenders > 0:
-		if not pOwner.isHuman():
-			if teamOwner.isAtWar(active()):
-				iPreserveDefenders += 2
-			elif any(civ(iOwner) in lCivGroup and civ() in lCivGroup for lCivGroup in dCivGroups.values()):
-				iPreserveDefenders += 1
+	# NOTE removed preserve defenders for now
+
+	# iPreserveHumanDefenders = iPreserveDefenders
+	# if iPreserveDefenders > 0:
+	# 	if not pOwner.isHuman():
+	# 		if teamOwner.isAtWar(active()):
+	# 			iPreserveDefenders += 2
+	# 		elif any(civ(iOwner) in lCivGroup and civ() in lCivGroup for lCivGroup in dCivGroups.values()):
+	# 			iPreserveDefenders += 1
 						
 	# TODO: look from overlap
 	for unit in units.at(pPlot):
-		if player(unit).isHuman():
-			if iPreserveHumanDefenders > 0:
-				if isDefenderUnit(unit):
-					iPreserveHumanDefenders -= 1
-					if pPlot.getNumUnits() <= iPreserveDefenders:
-						iMaxDamage = 50
-						if unit.workRate(100) > 0 and not unit.canFight(): iMaxDamage = 100
-						unit.setDamage(min(iMaxDamage, unit.getDamage() + iDamage - 20), barbarian())
-					continue
+		# if player(unit).isHuman():
+		# 	if iPreserveHumanDefenders > 0:
+		# 		if isDefenderUnit(unit):
+		# 			iPreserveHumanDefenders -= 1
+		# 			if pPlot.getNumUnits() <= iPreserveDefenders:
+		# 				iMaxDamage = 50
+		# 				if unit.workRate(100) > 0 and not unit.canFight(): iMaxDamage = 100
+		# 				unit.setDamage(min(iMaxDamage, unit.getDamage() + iDamage - 20), barbarian())
+		# 			continue
 
-		elif iPreserveDefenders > 0:
-			if isDefenderUnit(unit):
-				iPreserveDefenders -= 1
-				if pPlot.getNumUnits() <= iPreserveDefenders and team(unit).isAtWar(active()):
-					iMaxDamage = 50
-					if unit.workRate(100) > 0 and not unit.canFight(): iMaxDamage = 100
-					unit.setDamage(min(iMaxDamage, unit.getDamage() + iDamage - 20), barbarian())
-				continue
+		# elif iPreserveDefenders > 0:
+		# 	if isDefenderUnit(unit):
+		# 		iPreserveDefenders -= 1
+		# 		if pPlot.getNumUnits() <= iPreserveDefenders and team(unit).isAtWar(active()):
+		# 			iMaxDamage = 50
+		# 			if unit.workRate(100) > 0 and not unit.canFight(): iMaxDamage = 100
+		# 			unit.setDamage(min(iMaxDamage, unit.getDamage() + iDamage - 20), barbarian())
+		# 		continue
 
 		if isMortalUnit(unit):
 			iThreshold = baseValue + 5 * city.healthRate(False, 0)

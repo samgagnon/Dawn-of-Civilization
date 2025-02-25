@@ -62,6 +62,8 @@ iModifierCitiesMaintenance, iModifierCivicUpkeep, iModifierHealth, iModifierUnit
 iModifierBuildingCost, iModifierInflationRate, iModifierGreatPeopleThreshold, iModifierGrowthThreshold) = range(iNumModifiers)
 
 ### Modifiers (by civilization!) ###
+# TODO: remove all references to these arrays
+# TODO: use tDefaults instead of any of these
 
 # 				            EGY BAB HAR ASS CHI HIT GRE NUB IND CAR PLY PER CEL ROM MAY TAM ETH TOL KUS KOR KHM MAL BYZ FRA MAA JAP VIK TUR ARA TIB MOO JAV SPA ENG HRE BUR UKR VIE SWA POL POR INC ITA MON AZT MUG THA SWE RUS OTT CON IRA NET GER AME ARG MEX COL BRA CAN     IND IND NAT BAR 
 
